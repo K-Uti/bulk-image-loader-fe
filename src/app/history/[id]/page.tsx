@@ -44,9 +44,7 @@ export default function BatchDetailsPage({
 				</Link>
 				<div>
 					<div className='flex items-center space-x-2'>
-						<h1 className='text-2xl font-bold tracking-tight'>
-							Folder: {params.id}
-						</h1>
+						<h1 className='text-2xl font-bold tracking-tight'>Folder:</h1>
 						<span className='text-xs px-2 py-0.5 font-mono rounded bg-zinc-800 text-zinc-400'>
 							s3://auction-bucket/processed/
 						</span>

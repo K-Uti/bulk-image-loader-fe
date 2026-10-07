@@ -11,31 +11,62 @@ import {
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
-import { UploadCloud, FileArchive, CheckCircle2, Loader2 } from 'lucide-react';
+import {
+	UploadCloud,
+	FileArchive,
+	CheckCircle2,
+	Loader2,
+	AlertCircle,
+} from 'lucide-react';
+
+import { createUploadBatch } from './actions';
+
+enum UploadSteps {
+	IDLE = 'idle',
+	UPLOADING = 'uploading',
+	PROCESSING = 'processing',
+	SUCCESS = 'success',
+	ERROR = 'error',
+}
 
 export default function UploadPage() {
 	const [isUploading, setIsUploading] = useState(false);
-	const [uploadStep, setUploadStep] = useState<
-		'idle' | 'uploading' | 'processing' | 'success'
-	>('idle');
+	const [uploadStep, setUploadStep] = useState<UploadSteps>(UploadSteps.IDLE);
 	const [progress, setProgress] = useState(0);
+	const [batchId, setBatchId] = useState<string | null>(null);
+	const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-	const handleStartSimulate = () => {
+	const handleStartUpload = async () => {
 		setIsUploading(true);
-		setUploadStep('uploading');
-		setProgress(10);
+		setUploadStep(UploadSteps.UPLOADING);
+		setProgress(5);
+		setErrorMessage(null);
+
+		const testFileName = 'items.zip';
+
+		const result = await createUploadBatch(testFileName);
+
+		if (!result.success || !result.batch) {
+			setUploadStep(UploadSteps.ERROR);
+			setErrorMessage(result.error || 'Something went wrong');
+			setIsUploading(false);
+			return;
+		}
+
+		setBatchId(result.batch.id);
+		setProgress(30);
 
 		// 1 stage: S3 archive upload
 		setTimeout(() => {
 			setProgress(40);
-			setUploadStep('processing');
+			setUploadStep(UploadSteps.PROCESSING);
 
 			// 2 stage: worker jobs
 			const interval = setInterval(() => {
 				setProgress(prev => {
 					if (prev >= 100) {
 						clearInterval(interval);
-						setUploadStep('success');
+						setUploadStep(UploadSteps.SUCCESS);
 						setIsUploading(false);
 						return 100;
 					}
@@ -66,7 +97,7 @@ export default function UploadPage() {
 						.jpg, .png.
 					</p>
 					<Button
-						onClick={handleStartSimulate}
+						onClick={handleStartUpload}
 						disabled={isUploading}
 						className='bg-emerald-600 hover:bg-emerald-500 text-white font-medium'
 					>
@@ -75,8 +106,16 @@ export default function UploadPage() {
 				</CardContent>
 			</Card>
 
+			{/* Error indicator */}
+			{uploadStep === 'error' && (
+				<Card className='bg-rose-950/20 border-rose-900/50 text-rose-400 p-4 flex items-center space-x-3'>
+					<AlertCircle className='w-5 h-5 shrink-0' />
+					<p className='text-sm'>{errorMessage}</p>
+				</Card>
+			)}
+
 			{/* Process indicator (RabbitMQ / Kafka stream) */}
-			{uploadStep !== 'idle' && (
+			{uploadStep !== 'idle' && uploadStep !== 'error' && (
 				<Card className='bg-zinc-900 border-zinc-800'>
 					<CardHeader>
 						<div className='flex items-center justify-between'>
@@ -96,7 +135,7 @@ export default function UploadPage() {
 								variant='outline'
 								className='border-zinc-700 text-zinc-300 font-mono'
 							>
-								ID: task_usr_99a1
+								ID: {batchId ? batchId.slice(0, 8) + '...' : 'creating...'}
 							</Badge>
 						</div>
 						<CardDescription>
