@@ -57,7 +57,7 @@ export default function BatchDetailsPage({
 				</div>
 			</div>
 
-			{/* Galery */}
+			{/* Gallery */}
 			<div className='grid gap-6 sm:grid-cols-2 md:grid-cols-4'>
 				{mockImages.map(img => (
 					<Card

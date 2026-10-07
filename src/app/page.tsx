@@ -20,20 +20,17 @@ export default function UploadPage() {
 	>('idle');
 	const [progress, setProgress] = useState(0);
 
-	console.log(progress);
-
-	// Имитация процесса асинхронной обработки
 	const handleStartSimulate = () => {
 		setIsUploading(true);
 		setUploadStep('uploading');
 		setProgress(10);
 
-		// Этап 1: Загрузка на S3
+		// 1 stage: S3 archive upload
 		setTimeout(() => {
 			setProgress(40);
 			setUploadStep('processing');
 
-			// Этап 2: Работа воркера (распаковка и сохранение)
+			// 2 stage: worker jobs
 			const interval = setInterval(() => {
 				setProgress(prev => {
 					if (prev >= 100) {
