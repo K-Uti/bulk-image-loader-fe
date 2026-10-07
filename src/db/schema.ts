@@ -7,11 +7,19 @@ import {
 } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
+export enum BatchStatus {
+	IDLE = 'idle',
+	UPLOADING = 'uploading',
+	PROCESSING = 'processing',
+	SUCCESS = 'success',
+	FAILED = 'failed',
+}
+
 // Archives
 export const batches = pgTable('batches', {
 	id: uuid('id').defaultRandom().primaryKey(),
 	name: varchar('name', { length: 255 }).notNull(),
-	status: varchar('status', { length: 50 }).default('idle').notNull(), // idle, uploading, processing, success, failed
+	status: varchar('status', { length: 50 }).default(BatchStatus.IDLE).notNull(), // idle, uploading, processing, success, failed
 	progress: integer('progress').default(0).notNull(),
 	totalItems: integer('total_items').default(0).notNull(),
 	createdAt: timestamp('created_at').defaultNow().notNull(),

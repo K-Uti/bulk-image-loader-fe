@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
 	Card,
 	CardContent,
@@ -11,6 +11,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import {
 	UploadCloud,
 	FileArchive,
@@ -34,17 +35,25 @@ export default function UploadPage() {
 	const [uploadStep, setUploadStep] = useState<UploadSteps>(UploadSteps.IDLE);
 	const [progress, setProgress] = useState(0);
 	const [batchId, setBatchId] = useState<string | null>(null);
+	const [fileName, setFileName] = useState<string | null>(null);
 	const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-	const handleStartUpload = async () => {
+	const fileInputRef = useRef<HTMLInputElement>(null);
+
+	const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+		const file = e.target.files?.[0];
+		if (!file) return;
+
 		setIsUploading(true);
 		setUploadStep(UploadSteps.UPLOADING);
 		setProgress(5);
+		setFileName(file.name);
 		setErrorMessage(null);
 
-		const testFileName = 'items.zip';
+		const formData = new FormData();
+		formData.append('file', file);
 
-		const result = await createUploadBatch(testFileName);
+		const result = await createUploadBatch(formData);
 
 		if (!result.success || !result.batch) {
 			setUploadStep(UploadSteps.ERROR);
@@ -96,8 +105,16 @@ export default function UploadPage() {
 						Titles of the files turned into object titles. Supported formats
 						.jpg, .png.
 					</p>
+					<Input
+						type='file'
+						accept='.zip'
+						className='hidden'
+						ref={fileInputRef}
+						onChange={handleFileChange}
+						disabled={isUploading}
+					/>
 					<Button
-						onClick={handleStartUpload}
+						onClick={() => fileInputRef.current?.click()}
 						disabled={isUploading}
 						className='bg-emerald-600 hover:bg-emerald-500 text-white font-medium'
 					>
