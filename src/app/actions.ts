@@ -6,6 +6,7 @@ import { revalidatePath } from 'next/cache';
 import { s3Client, ensureBucketExists } from '@/lib/s3';
 import { PutObjectCommand } from '@aws-sdk/client-s3';
 import { eq } from 'drizzle-orm';
+import { sendToQueue } from '@/lib/rabbitmq';
 
 // create new batch upload session
 export async function createUploadBatch(formData: FormData) {
@@ -47,6 +48,15 @@ export async function createUploadBatch(formData: FormData) {
 			`[S3] File ${file.name} successfully loaded to bucket with key: ${s3Key}`
 		);
 
+		// send task to rabbitmq
+		const rabbitTask = {
+			batchId: newBatch.id,
+			s3Key: s3Key,
+			fileName: file.name,
+		};
+
+		const isSent = await sendToQueue('upload_batches', rabbitTask);
+
 		// setting status to processing
 		await db
 			.update(batches)
@@ -59,7 +69,15 @@ export async function createUploadBatch(formData: FormData) {
 		// invalidate page so that new data appears
 		revalidatePath('/history');
 
-		return { success: true, batch: newBatch };
+		return {
+			success: isSent,
+			batch: {
+				...newBatch,
+				status: isSent ? BatchStatus.PROCESSING : BatchStatus.FAILED,
+				progress: 30,
+			},
+			error: isSent ? null : 'Broker unavailable',
+		};
 	} catch (error) {
 		console.error('Error upon creating new batch:', error);
 		return {
